@@ -250,25 +250,44 @@ class ChargifyProduct(ChargifyBase):
 
     id = None
     price_in_cents = 0
-    name = ''
-    handle = ''
+    name = None
+    handle = None
+    description = None
     product_family = {}
-    accounting_code = ''
-    interval_unit = ''
-    interval = 0
+    accounting_code = None
+    interval_unit = 'day'  # month or day
+    interval = 30
+    initial_charge_in_cents = 0
+    trial_price_in_cents = 0
+    trial_interval = 0
+    trial_interval_unit = 'day'  # month or day
+    expiration_interval = 0
+    expiration_interval_unit = 'day'  # month or day
+    return_url = ''
+    require_credit_card = True
+    created_at = None
+    updated_at = None
+    archived_at = None
 
-    def __init__(self, apikey, subdomain, nodename=''):
-        super(ChargifyProduct, self).__init__(apikey, subdomain)
-        if nodename:
-            self.__xmlnodename__ = nodename
+    def __repr__(self):
+        return '<{0} {1}>'.format(
+            self.__name__, self.name
+        )
 
-    def getAll(self):
-        return self._applyA(self._get('/products.xml'),
-            self.__name__, 'product')
+    def get(self, id=None):
+        """
+        Get a list of Products or a single product
+        """
+        if not id:
+            products = self._get('products.json')
 
-    def getById(self, id):
-        return self._applyS(self._get('/products/' + str(id) + '.xml'),
-            self.__name__, 'product')
+            product_list = set()
+            for product in products:
+                product_list.add(self.parse_fields(product, 'product'))
+            return list(product_list)
+
+        product = self._get('products/{0}.json'.format(id))
+        return self.parse_fields(product, 'product')
 
     def getByHandle(self, handle):
         return self._applyS(self._get('/products/handle/' + str(handle) +
