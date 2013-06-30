@@ -325,7 +325,6 @@ class ChargifySubscription(ChargifyBase):
         'product': 'ChargifyProduct',
         'credit_card': 'ChargifyCreditCard'
     }
-    __xmlnodename__ = 'subscription'
 
     id = None
     state = ''
@@ -343,10 +342,11 @@ class ChargifySubscription(ChargifyBase):
     product_handle = ''
     credit_card = None
 
-    def __init__(self, apikey, subdomain, nodename=''):
-        super(ChargifySubscription, self).__init__(apikey, subdomain)
-        if nodename:
-            self.__xmlnodename__ = nodename
+    def __repr__(self):
+        return '<ChargifySubscription {0}-{1}>'.format(
+            self.product, self.customer
+        )
+
 
     def getAll(self):
         return self._applyA(self._get('/subscriptions.xml'),
