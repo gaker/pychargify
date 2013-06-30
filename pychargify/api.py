@@ -19,76 +19,19 @@ Created on Nov 20, 2009
 Author: Paul Trippett (paul@pyhub.com)
 '''
 
-import httplib
 import base64
 import datetime
-import iso8601
+import json
+import requests
+import dateutil.parser
 from itertools import chain
-from xml.dom import minidom
 
-
-try:
-    import json
-except Exception, e:
-    try:
-        import simplejson as json
-    except Exception, e:
-        try:
-            # For AppEngine users
-            import django.utils.simplejson as json
-        except Exception, e:
-            print "No Json library found... Exiting."
-            exit()
-
-
-class ChargifyError(Exception):
-    """
-    A Chargify Releated error
-    @license    GNU General Public License
-    """
-    pass
-
-
-class ChargifyUnAuthorized(ChargifyError):
-    """
-    Returned when API authentication has failed.
-    @license    GNU General Public License
-    """
-    pass
-
-
-class ChargifyForbidden(ChargifyError):
-    """
-    Returned by valid endpoints in our application that have not been
-    enabled for API use.
-    @license    GNU General Public License
-    """
-    pass
-
-
-class ChargifyNotFound(ChargifyError):
-    """
-    The requested resource was not found.
-    @license    GNU General Public License
-    """
-    pass
-
-
-class ChargifyUnProcessableEntity(ChargifyError):
-    """
-    Sent in response to a POST (create) or PUT (update) request
-    that is invalid.
-    @license    GNU General Public License
-    """
-    pass
-
-
-class ChargifyServerError(ChargifyError):
-    """
-    Signals some other error
-    @license    GNU General Public License
-    """
-    pass
+from pychargify import get_version
+from .exceptions import (
+    ChargifyError, ChargifyUnAuthorized,
+    ChargifyForbidden, ChargifyNotFound,
+    ChargifyUnProcessableEntity, ChargifyServerError
+)
 
 
 class ChargifyBase(object):
@@ -113,7 +56,10 @@ class ChargifyBase(object):
         """
         self.api_key = apikey
         self.sub_domain = subdomain
-        self.request_host = self.sub_domain + self.base_host
+        self.request_host = "https://{0}{1}".format(
+            self.sub_domain,
+            self.base_host
+        )
 
     def __get_xml_value(self, nodelist):
         """
@@ -125,32 +71,50 @@ class ChargifyBase(object):
                 rc = rc + node.data
         return rc
 
-    def __get_object_from_node(self, node, obj_type=''):
+    def parse_fields(self, json_obj, obj_type):
+        """
+        Parse fields from a JSON response into an object.
+        """
+        constructor = globals()[self.__name__]
+        obj = constructor(self.api_key, self.sub_domain)
+
+        for field in self.__fields__:
+            if field in self.__date_fields__:
+                setattr(
+                    obj, field,
+                    dateutil.parser.parse(json_obj.get(obj_type, {}).get(field)))
+            else:
+                setattr(obj, field, json_obj.get(obj_type, {}).get(field))
+
+        return obj
+
+    def __get_object_from_node(self, json_obj, obj_type=''):
         """
         Copy values from a node into a new Object
         """
+        import ipdb; ipdb.set_trace()
         if obj_type == '':
             constructor = globals()[self.__name__]
         else:
             constructor = globals()[obj_type]
         obj = constructor(self.api_key, self.sub_domain)
 
-        for childnodes in node.childNodes:
-            if childnodes.nodeType == 1 and not childnodes.nodeName == '':
-                if childnodes.nodeName in self.__attribute_types__:
-                    obj.__setattr__(childnodes.nodeName,
-                        self._applyS(childnodes.toxml(),
-                        self.__attribute_types__[childnodes.nodeName],
-                            childnodes.nodeName))
-                else:
-                    node_value = self.__get_xml_value(childnodes.childNodes)
-                    if "type" in  childnodes.attributes.keys():
-                        node_type = childnodes.attributes["type"]
-                        if node_value:
-                            if node_type.nodeValue == 'datetime':
-                                node_value = datetime.datetime.fromtimestamp(
-                                    iso8601.parse(node_value))
-                    obj.__setattr__(childnodes.nodeName, node_value)
+        # for k, v in json_obj.iteritems():
+            # if childnodes.nodeType == 1 and not childnodes.nodeName == '':
+            #     if childnodes.nodeName in self.__attribute_types__:
+            #         obj.__setattr__(childnodes.nodeName,
+            #             self._applyS(childnodes.toxml(),
+            #             self.__attribute_types__[childnodes.nodeName],
+            #                 childnodes.nodeName))
+            #     else:
+            #         node_value = self.__get_xml_value(childnodes.childNodes)
+            #         if "type" in  childnodes.attributes.keys():
+            #             node_type = childnodes.attributes["type"]
+            #             if node_value:
+            #                 if node_type.nodeValue == 'datetime':
+            #                     node_value = datetime.datetime.fromtimestamp(
+            #                         iso8601.parse(node_value))
+            #         obj.__setattr__(childnodes.nodeName, node_value)
         return obj
 
     def fix_xml_encoding(self, xml):
@@ -172,68 +136,74 @@ class ChargifyBase(object):
         if nodes.length == 1:
             return self.__get_object_from_node(nodes[0], obj_type)
 
-    def _applyA(self, xml, obj_type, node_name):
+    def _applyA(self, resp, obj_type, node_name):
         """
         Apply the values of the passed data to a new class of the current type
         """
-        dom = minidom.parseString(self.fix_xml_encoding(xml))
-        nodes = dom.getElementsByTagName(node_name)
         objs = []
-        for node in nodes:
-            objs.append(self.__get_object_from_node(node, obj_type))
+        import ipdb; ipdb.set_trace()
+        for node in json.loads(resp):
+            objs.append(self.__get_object_from_node(
+                node[node_name], obj_type))
         return objs
 
-    def _toxml(self, dom):
-        """
-        Return a XML Representation of the object
-        """
-        element = minidom.Element(self.__xmlnodename__)
-        for property, value in self.__dict__.iteritems():
-            if not property in self.__ignore__:
-                if property in self.__attribute_types__:
-                    element.appendChild(value._toxml(dom))
-                else:
-                    node = minidom.Element(property)
-                    node_txt = dom.createTextNode(str(value))
-                    node.appendChild(node_txt)
-                    element.appendChild(node)
-        return element
+    # def _toxml(self, dom):
+    #     """
+    #     Return a XML Representation of the object
+    #     """
+    #     element = minidom.Element(self.__xmlnodename__)
+    #     for property, value in self.__dict__.iteritems():
+    #         if not property in self.__ignore__:
+    #             if property in self.__attribute_types__:
+    #                 element.appendChild(value._toxml(dom))
+    #             else:
+    #                 node = minidom.Element(property)
+    #                 node_txt = dom.createTextNode(str(value))
+    #                 node.appendChild(node_txt)
+    #                 element.appendChild(node)
+    #     return element
+
+    @property
+    def headers(self):
+        return {
+            'user-agent': "pyChargify/{0}".format(get_version()),
+            'content-type': 'application/json'
+        }
+
+    def check_response_code(self, status_code):
+
+        # Unauthorized Error
+        if status_code == 401:
+            raise ChargifyUnAuthorized()
+
+        # Forbidden Error
+        elif status_code == 403:
+            raise ChargifyForbidden()
+
+        # Not Found Error
+        elif status_code == 404:
+            raise ChargifyNotFound()
+
+        # Unprocessable Entity Error
+        elif status_code == 422:
+            raise ChargifyUnProcessableEntity()
+
+        # Generic Server Errors
+        elif status_code in [405, 500]:
+            raise ChargifyServerError()
 
     def _get(self, url):
         """
         Handle HTTP GET's to the API
         """
-        headers = {
-            "Authorization": "Basic %s" % self._get_auth_string(),
-            "User-Agent": "pyChargify",
-            "Content-Type": 'text/xml'
-        }
+        response = requests.get(
+            "{0}/{1}".format(self.request_host, url.lstrip('/')),
+            auth=(self.api_key, 'x'),
+            headers=self.headers)
 
-        r = httplib.HTTPSConnection(self.request_host)
-        r.request('GET', url, None, headers)
-        response = r.getresponse()
+        self.check_response_code(response.status_code)
 
-        # Unauthorized Error
-        if response.status == 401:
-            raise ChargifyUnAuthorized()
-
-        # Forbidden Error
-        elif response.status == 403:
-            raise ChargifyForbidden()
-
-        # Not Found Error
-        elif response.status == 404:
-            raise ChargifyNotFound()
-
-        # Unprocessable Entity Error
-        elif response.status == 422:
-            raise ChargifyUnProcessableEntity()
-
-        # Generic Server Errors
-        elif response.status in [405, 500]:
-            raise ChargifyServerError()
-
-        return response.read()
+        return json.loads(response.content)
 
     def _post(self, url, data):
         """
@@ -241,17 +211,76 @@ class ChargifyBase(object):
         """
         return self._request('POST', url, data)
 
-    def _put(self, url, data):
+    def _put(self, url, payload):
         """
         Handle HTTP PUT's to the API
         """
-        return self._request('PUT', url, data)
+        response = requests.put(
+            "{0}/{1}".format(self.request_host, url.lstrip('/')),
+            auth=(self.api_key, 'x'),
+            headers=self.headers,
+            data=json.dumps(payload)
+        )
+
+        self.check_response_code(response.status_code)
+        return json.loads(response.content)
 
     def _delete(self, url, data):
         """
         Handle HTTP DELETE's to the API
         """
         return self._request('DELETE', url, data)
+
+    def _save(self, url, node_name):
+        """
+        Save the object using the passed URL as the API end point
+        """
+        obj_dict = {}
+
+        for item in self.__fields__:
+            if item not in ('id', 'created_at', 'updated_at'):
+                obj_dict[item] = getattr(self, item)
+
+        payload = {node_name: obj_dict}
+
+        if self.id:
+            return self._put(url, payload)
+        else:
+            obj = self._post()
+
+        # dom = minidom.Document()
+        # dom.appendChild(self._toxml(dom))
+
+        # request_made = {
+        #     'day': datetime.datetime.today().day,
+        #     'month': datetime.datetime.today().month,
+        #     'year': datetime.datetime.today().year
+        # }
+
+        # if self.id:
+        #     obj = self._applyS(self._put('/' + url + '/' + self.id + '.xml',
+        #         dom.toxml(encoding="utf-8")), self.__name__, node_name)
+        #     if obj:
+        #         if type(obj.updated_at) == datetime.datetime:
+        #             if (obj.updated_at.day == request_made['day']) and \
+        #                 (obj.updated_at.month == request_made['month']) and \
+        #                 (obj.updated_at.year == request_made['year']):
+        #                 self.saved = True
+        #                 return (True, obj)
+        #     return (False, obj)
+        # else:
+        #     obj = self._applyS(self._post('/' + url + '.xml',
+        #         dom.toxml(encoding="utf-8")), self.__name__, node_name)
+        #     if obj:
+        #         if type(obj.updated_at) == datetime.datetime:
+        #             if (obj.updated_at.day == request_made['day']) and \
+        #                 (obj.updated_at.month == request_made['month']) and \
+        #                 (obj.updated_at.year == request_made['year']):
+        #                 return (True, obj)
+        #     return (False, obj)
+
+    def _get_auth_string(self):
+        return base64.encodestring('%s:%s' % (self.api_key, 'x'))[:-1]
 
     def _request(self, method, url, data=''):
         """
@@ -295,44 +324,6 @@ class ChargifyBase(object):
 
         return response.read()
 
-    def _save(self, url, node_name):
-        """
-        Save the object using the passed URL as the API end point
-        """
-        dom = minidom.Document()
-        dom.appendChild(self._toxml(dom))
-
-        request_made = {
-            'day': datetime.datetime.today().day,
-            'month': datetime.datetime.today().month,
-            'year': datetime.datetime.today().year
-        }
-
-        if self.id:
-            obj = self._applyS(self._put('/' + url + '/' + self.id + '.xml',
-                dom.toxml(encoding="utf-8")), self.__name__, node_name)
-            if obj:
-                if type(obj.updated_at) == datetime.datetime:
-                    if (obj.updated_at.day == request_made['day']) and \
-                        (obj.updated_at.month == request_made['month']) and \
-                        (obj.updated_at.year == request_made['year']):
-                        self.saved = True
-                        return (True, obj)
-            return (False, obj)
-        else:
-            obj = self._applyS(self._post('/' + url + '.xml',
-                dom.toxml(encoding="utf-8")), self.__name__, node_name)
-            if obj:
-                if type(obj.updated_at) == datetime.datetime:
-                    if (obj.updated_at.day == request_made['day']) and \
-                        (obj.updated_at.month == request_made['month']) and \
-                        (obj.updated_at.year == request_made['year']):
-                        return (True, obj)
-            return (False, obj)
-
-    def _get_auth_string(self):
-        return base64.encodestring('%s:%s' % (self.api_key, 'x'))[:-1]
-
 
 class ChargifyCustomer(ChargifyBase):
     """
@@ -341,40 +332,65 @@ class ChargifyCustomer(ChargifyBase):
     """
     __name__ = 'ChargifyCustomer'
     __attribute_types__ = {}
-    __xmlnodename__ = 'customer'
+    __fields__ = [
+        'id', 'first_name', 'last_name', 'email',
+        'city', 'address', 'address_2', 'state', 'zip',
+        'country', 'phone', 'organization', 'reference',
+        'created_at', 'updated_at', ]
+
+    __date_fields__ = ['created_at', 'updated_at', ]
 
     id = None
-    first_name = ''
-    last_name = ''
-    email = ''
-    organization = ''
-    reference = ''
+    first_name = None
+    last_name = None
+    email = None
+    city = None
+    address = None
+    address_2 = None
+    state = None
+    zip = None
+    country = None
+    phone = None
+    organization = None
+    reference = None
     created_at = None
-    modified_at = None
+    updated_at = None
 
-    def __init__(self, apikey, subdomain, nodename=''):
-        super(ChargifyCustomer, self).__init__(apikey, subdomain)
-        if nodename:
-            self.__xmlnodename__ = nodename
+    def __repr__(self):
+        return '<ChargifyCustomer {0} {1}>'.format(self.first_name, self.last_name)
 
-    def getAll(self):
-        return self._applyA(self._get('/customers.xml'),
-            self.__name__, 'customer')
+    def get(self, id=None):
+        """
+        Get a list of customers, or a customer by their internal id.
+        """
+        if not id:
+            customers = self._get('customers.json')
 
-    def getById(self, id):
-        return self._applyS(self._get('/customers/' + str(id) + '.xml'),
-            self.__name__, 'customer')
+            customer_list = set()
+            for customer in customers:
+                customer_list.add(self.parse_fields(customer, 'customer'))
+            return list(customer_list)
 
-    def getByReference(self, reference):
-        return self._applyS(self._get('/customers/lookup.xml?reference=' +
-            str(reference)), self.__name__, 'customer')
+        customer = self._get('customers/{0}.json'.format(str(id)))
+        return self.parse_fields(customer, 'customer')
 
-    def getSubscriptions(self):
-        obj = ChargifySubscription(self.api_key, self.sub_domain)
-        return obj.getByCustomerId(self.id)
+    def get_by_reference(self, reference):
+        customer = self._get(
+            'customers/lookup.json?reference={0}'.format(reference)
+        )
+        return self.parse_fields(customer, 'customer')
+
+    # def get_subscriptions(self):
+    #     obj = ChargifySubscription(self.api_key, self.sub_domain)
+    #     return obj.getByCustomerId(self.id)
 
     def save(self):
-        return self._save('customers', 'customer')
+        if self.id:
+            url = 'customers/{0}.json'.format(self.id)
+        else:
+            url = 'customers.json'
+        customer = self._save(url, 'customer')
+        return self.parse_fields(customer, 'customer')
 
 
 class ChargifyProduct(ChargifyBase):

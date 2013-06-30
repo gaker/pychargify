@@ -5,7 +5,7 @@
 
 import sys
 
-import api
+from pychargify import api
 
 
 def print_spacer(repeat=70):
