@@ -24,7 +24,6 @@ import datetime
 import json
 import requests
 import dateutil.parser
-from itertools import chain
 
 from pychargify import get_version
 from .exceptions import (
@@ -40,8 +39,8 @@ class ChargifyBase(object):
     in this module
     @license    GNU General Public License
     """
-    __ignore__ = ['api_key', 'sub_domain', 'base_host', 'request_host',
-        'id', '__xmlnodename__']
+    __ignore__ = [
+        'api_key', 'sub_domain', 'base_host', 'request_host', 'id',]
 
     api_key = ''
     sub_domain = ''
@@ -61,16 +60,6 @@ class ChargifyBase(object):
             self.base_host
         )
 
-    def __get_xml_value(self, nodelist):
-        """
-        Get the Text Value from an XML Node
-        """
-        rc = ""
-        for node in nodelist:
-            if node.nodeType == node.TEXT_NODE:
-                rc = rc + node.data
-        return rc
-
     def parse_fields(self, json_obj, obj_type):
         """
         Parse fields from a JSON response into an object.
@@ -82,96 +71,28 @@ class ChargifyBase(object):
             if field in self.__date_fields__:
                 setattr(
                     obj, field,
-                    dateutil.parser.parse(json_obj.get(obj_type, {}).get(field)))
+                    dateutil.parser.parse(
+                        json_obj.get(obj_type, {}).get(field)))
             else:
                 setattr(obj, field, json_obj.get(obj_type, {}).get(field))
 
         return obj
 
-    def __get_object_from_node(self, json_obj, obj_type=''):
-        """
-        Copy values from a node into a new Object
-        """
-        import ipdb; ipdb.set_trace()
-        if obj_type == '':
-            constructor = globals()[self.__name__]
-        else:
-            constructor = globals()[obj_type]
-        obj = constructor(self.api_key, self.sub_domain)
-
-        # for k, v in json_obj.iteritems():
-            # if childnodes.nodeType == 1 and not childnodes.nodeName == '':
-            #     if childnodes.nodeName in self.__attribute_types__:
-            #         obj.__setattr__(childnodes.nodeName,
-            #             self._applyS(childnodes.toxml(),
-            #             self.__attribute_types__[childnodes.nodeName],
-            #                 childnodes.nodeName))
-            #     else:
-            #         node_value = self.__get_xml_value(childnodes.childNodes)
-            #         if "type" in  childnodes.attributes.keys():
-            #             node_type = childnodes.attributes["type"]
-            #             if node_value:
-            #                 if node_type.nodeValue == 'datetime':
-            #                     node_value = datetime.datetime.fromtimestamp(
-            #                         iso8601.parse(node_value))
-            #         obj.__setattr__(childnodes.nodeName, node_value)
-        return obj
-
-    def fix_xml_encoding(self, xml):
-        """
-        Chargify encodes non-ascii characters in CP1252.
-        Decodes and re-encodes with xml characters.
-        Strips out whitespace "text nodes".
-        """
-        return unicode(''.join([i.strip() for i in xml.split('\n')])).encode(
-            'CP1252', 'replace').decode('utf-8', 'ignore').encode(
-            'ascii', 'xmlcharrefreplace')
-
-    def _applyS(self, xml, obj_type, node_name):
-        """
-        Apply the values of the passed xml data to the a class
-        """
-        dom = minidom.parseString(self.fix_xml_encoding(xml))
-        nodes = dom.getElementsByTagName(node_name)
-        if nodes.length == 1:
-            return self.__get_object_from_node(nodes[0], obj_type)
-
-    def _applyA(self, resp, obj_type, node_name):
-        """
-        Apply the values of the passed data to a new class of the current type
-        """
-        objs = []
-        import ipdb; ipdb.set_trace()
-        for node in json.loads(resp):
-            objs.append(self.__get_object_from_node(
-                node[node_name], obj_type))
-        return objs
-
-    # def _toxml(self, dom):
-    #     """
-    #     Return a XML Representation of the object
-    #     """
-    #     element = minidom.Element(self.__xmlnodename__)
-    #     for property, value in self.__dict__.iteritems():
-    #         if not property in self.__ignore__:
-    #             if property in self.__attribute_types__:
-    #                 element.appendChild(value._toxml(dom))
-    #             else:
-    #                 node = minidom.Element(property)
-    #                 node_txt = dom.createTextNode(str(value))
-    #                 node.appendChild(node_txt)
-    #                 element.appendChild(node)
-    #     return element
-
     @property
     def headers(self):
+        """
+        Headers to send on every request
+        """
         return {
             'user-agent': "pyChargify/{0}".format(get_version()),
             'content-type': 'application/json'
         }
 
     def check_response_code(self, status_code):
-
+        """
+        Helper method to check response code errors after
+        API calls.
+        """
         # Unauthorized Error
         if status_code == 401:
             raise ChargifyUnAuthorized()
@@ -248,82 +169,6 @@ class ChargifyBase(object):
         else:
             obj = self._post()
 
-        # dom = minidom.Document()
-        # dom.appendChild(self._toxml(dom))
-
-        # request_made = {
-        #     'day': datetime.datetime.today().day,
-        #     'month': datetime.datetime.today().month,
-        #     'year': datetime.datetime.today().year
-        # }
-
-        # if self.id:
-        #     obj = self._applyS(self._put('/' + url + '/' + self.id + '.xml',
-        #         dom.toxml(encoding="utf-8")), self.__name__, node_name)
-        #     if obj:
-        #         if type(obj.updated_at) == datetime.datetime:
-        #             if (obj.updated_at.day == request_made['day']) and \
-        #                 (obj.updated_at.month == request_made['month']) and \
-        #                 (obj.updated_at.year == request_made['year']):
-        #                 self.saved = True
-        #                 return (True, obj)
-        #     return (False, obj)
-        # else:
-        #     obj = self._applyS(self._post('/' + url + '.xml',
-        #         dom.toxml(encoding="utf-8")), self.__name__, node_name)
-        #     if obj:
-        #         if type(obj.updated_at) == datetime.datetime:
-        #             if (obj.updated_at.day == request_made['day']) and \
-        #                 (obj.updated_at.month == request_made['month']) and \
-        #                 (obj.updated_at.year == request_made['year']):
-        #                 return (True, obj)
-        #     return (False, obj)
-
-    def _get_auth_string(self):
-        return base64.encodestring('%s:%s' % (self.api_key, 'x'))[:-1]
-
-    def _request(self, method, url, data=''):
-        """
-        Handled the request and sends it to the server
-        """
-        http = httplib.HTTPSConnection(self.request_host)
-
-        http.putrequest(method, url)
-        http.putheader("Authorization", "Basic %s" % self._get_auth_string())
-        http.putheader("User-Agent", "pychargify")
-        http.putheader("Host", self.request_host)
-        http.putheader("Accept", "application/xml")
-        http.putheader("Content-Length", str(len(data)))
-        http.putheader("Content-Type", 'text/xml; charset="UTF-8"')
-        http.endheaders()
-
-        print('sending: %s' % data)
-
-        http.send(data)
-        response = http.getresponse()
-
-        # Unauthorized Error
-        if response.status == 401:
-            raise ChargifyUnAuthorized()
-
-        # Forbidden Error
-        elif response.status == 403:
-            raise ChargifyForbidden()
-
-        # Not Found Error
-        elif response.status == 404:
-            raise ChargifyNotFound()
-
-        # Unprocessable Entity Error
-        elif response.status == 422:
-            raise ChargifyUnProcessableEntity()
-
-        # Generic Server Errors
-        elif response.status in [405, 500]:
-            raise ChargifyServerError()
-
-        return response.read()
-
 
 class ChargifyCustomer(ChargifyBase):
     """
@@ -357,7 +202,8 @@ class ChargifyCustomer(ChargifyBase):
     updated_at = None
 
     def __repr__(self):
-        return '<ChargifyCustomer {0} {1}>'.format(self.first_name, self.last_name)
+        return '<ChargifyCustomer {0} {1}>'.format(
+            self.first_name, self.last_name)
 
     def get(self, id=None):
         """
