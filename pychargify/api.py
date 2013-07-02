@@ -19,8 +19,6 @@ Created on Nov 20, 2009
 Author: Paul Trippett (paul@pyhub.com)
 '''
 
-import base64
-import datetime
 import json
 import requests
 import dateutil.parser
@@ -35,7 +33,7 @@ from .exceptions import (
 
 class Base(object):
     """
-    The ChargifyBase class provides a common base for all classes
+    The ``Base`` class provides a common base for all classes
     in this module
     @license    GNU General Public License
     """
@@ -203,7 +201,7 @@ class Customer(Base):
     updated_at = None
 
     def __repr__(self):
-        return '<ChargifyCustomer {0} {1}>'.format(
+        return '<Customer {0} {1}>'.format(
             self.first_name, self.last_name)
 
     def get(self, id=None):
@@ -212,7 +210,7 @@ class Customer(Base):
         """
         if not id:
             customers = self._get('customers.json')
-
+            print customers
             customer_list = set()
             for customer in customers:
                 customer_list.add(self.parse_fields(customer, 'customer'))
@@ -415,7 +413,7 @@ class Subscription(Base):
         self._delete("/subscriptions/" + self.id + ".xml", xml)
 
 
-class CreditCard(ChargifyBase):
+class CreditCard(Base):
     """
     Represents Chargify Credit Cards
     """
@@ -466,14 +464,14 @@ class CreditCard(ChargifyBase):
             self.__name__, "subscription")
 
 
-class PostBack(ChargifyBase):
+class PostBack(Base):
     """
     Represents Chargify API Post Backs
     """
     subscriptions = []
 
     def __init__(self, apikey, subdomain, postback_data):
-        ChargifyBase.__init__(apikey, subdomain)
+        super(PostBack, self).__init__(apikey, subdomain)
         if postback_data:
             self._process_postback_data(postback_data)
 
