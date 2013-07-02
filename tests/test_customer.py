@@ -138,11 +138,33 @@ class TestCustomer(unittest.TestCase):
         customer.reference = "trane"
         customer.save()
 
-    # @httprettified
-    # def test_update_customer(self):
-    #     """
-    #     Test updating a customer record
-    #     """
-    #     HTTPretty.register_uri(
+    @httprettified
+    def test_update_customer(self):
+        """
+        Test updating a customer record
+        """
 
-    #     )
+        person = self.customer_list[0]
+
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            "https://some-test.chargify.com/customers/12345.json",
+            body=json.dumps(person)
+        )
+
+        obj = Customer('1234', 'some-test')
+        customer = obj.get(id=12345)
+
+        updated_person = person.copy()
+        updated_person['reference'] = 'foobar'
+
+        HTTPretty.register_uri(
+            HTTPretty.PUT,
+            "https://some-test.chargify.com/customers/12345.json",
+            content_type='application/json',
+            body=json.dumps(updated_person),
+            status=200
+        )
+
+        customer.reference = 'foobar'
+        obj = customer.save()
