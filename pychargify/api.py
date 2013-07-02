@@ -33,7 +33,7 @@ from .exceptions import (
 )
 
 
-class ChargifyBase(object):
+class Base(object):
     """
     The ChargifyBase class provides a common base for all classes
     in this module
@@ -41,6 +41,8 @@ class ChargifyBase(object):
     """
     __ignore__ = [
         'api_key', 'sub_domain', 'base_host', 'request_host', 'id',]
+
+    __date_fields__ = ['created_at', 'updated_at', 'archived_at', ]
 
     api_key = ''
     sub_domain = ''
@@ -69,10 +71,9 @@ class ChargifyBase(object):
 
         for field in self.__fields__:
             if field in self.__date_fields__:
-                setattr(
-                    obj, field,
-                    dateutil.parser.parse(
-                        json_obj.get(obj_type, {}).get(field)))
+                val = json_obj.get(obj_type, {}).get(field, None)
+                if val:
+                    setattr(obj, field, dateutil.parser.parse(val))
             else:
                 setattr(obj, field, json_obj.get(obj_type, {}).get(field))
 
@@ -170,7 +171,7 @@ class ChargifyBase(object):
             obj = self._post()
 
 
-class ChargifyCustomer(ChargifyBase):
+class Customer(Base):
     """
     Represents Chargify Customers
     @license    GNU General Public License
@@ -182,8 +183,6 @@ class ChargifyCustomer(ChargifyBase):
         'city', 'address', 'address_2', 'state', 'zip',
         'country', 'phone', 'organization', 'reference',
         'created_at', 'updated_at', ]
-
-    __date_fields__ = ['created_at', 'updated_at', ]
 
     id = None
     first_name = None
@@ -239,14 +238,21 @@ class ChargifyCustomer(ChargifyBase):
         return self.parse_fields(customer, 'customer')
 
 
-class ChargifyProduct(ChargifyBase):
+class Product(Base):
     """
     Represents Chargify Products
     @license    GNU General Public License
     """
-    __name__ = 'ChargifyProduct'
+    __name__ = 'Product'
     __attribute_types__ = {}
-    __xmlnodename__ = 'product'
+    __fields__ = [
+        'id', 'price_in_cents', 'name', 'handle', 'description',
+        'product_family', 'accounting_code', 'interval_unit', 'interval',
+        'initial_charge_in_cents', 'trial_price_in_cents', 'trial_interval',
+        'trial_interval_unit', 'expiration_interval',
+        'expiration_interval_unit', 'return_url', 'created_at', 'updated_at',
+        'archived_at'
+    ]
 
     id = None
     price_in_cents = 0
@@ -314,12 +320,12 @@ class Usage(object):
         self.memo = memo
 
 
-class ChargifySubscription(ChargifyBase):
+class Subscription(Base):
     """
     Represents Chargify Subscriptions
     @license    GNU General Public License
     """
-    __name__ = 'ChargifySubscription'
+    __name__ = 'Subscription'
     __attribute_types__ = {
         'customer': 'ChargifyCustomer',
         'product': 'ChargifyProduct',
@@ -491,35 +497,34 @@ class Chargify:
     sub_domain = ''
 
     def __init__(self, apikey=None, subdomain=None, cred_file=None):
-        ''' We take either an api_key and sub_domain, or a path
+        '''
+        We take either an api_key and sub_domain, or a path
         to a file with JSON that defines those two, or we throw
-        an error.'''
-
+        an error.
+        '''
         if self.api_key and self.sub_domain:
             self.api_key = apikey
             self.sub_domain = subdomain
-            return
         elif cred_file:
             f = open(cred_file)
             credentials = json.loads(f.read())
             self.api_key = credentials['api_key']
             self.sub_domain = credentials['sub_domain']
-            return
         else:
-            print "Need either an api_key and subdomain, or credential file. Exiting."
+            print("Need either an api_key and subdomain, or credential file. Exiting.")
             exit()
 
-    def Customer(self, nodename=''):
-        return ChargifyCustomer(self.api_key, self.sub_domain, nodename)
+    def customer(self, nodename=''):
+        return Customer(self.api_key, self.sub_domain, nodename)
 
-    def Product(self, nodename=''):
-        return ChargifyProduct(self.api_key, self.sub_domain, nodename)
+    def product(self, nodename=''):
+        return Product(self.api_key, self.sub_domain, nodename)
 
-    def Subscription(self, nodename=''):
-        return ChargifySubscription(self.api_key, self.sub_domain, nodename)
+    def subscription(self, nodename=''):
+        return Subscription(self.api_key, self.sub_domain, nodename)
 
-    def CreditCard(self, nodename=''):
-        return ChargifyCreditCard(self.api_key, self.sub_domain, nodename)
+    def credit_card(self, nodename=''):
+        return CreditCard(self.api_key, self.sub_domain, nodename)
 
-    def PostBack(self, postbackdata):
-        return ChargifyPostBack(self.api_key, self.sub_domain, postbackdata)
+    def post_back(self, postbackdata):
+        return PostBack(self.api_key, self.sub_domain, postbackdata)
