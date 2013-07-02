@@ -415,7 +415,7 @@ class Subscription(Base):
         self._delete("/subscriptions/" + self.id + ".xml", xml)
 
 
-class ChargifyCreditCard(ChargifyBase):
+class CreditCard(ChargifyBase):
     """
     Represents Chargify Credit Cards
     """
@@ -466,10 +466,9 @@ class ChargifyCreditCard(ChargifyBase):
             self.__name__, "subscription")
 
 
-class ChargifyPostBack(ChargifyBase):
+class PostBack(ChargifyBase):
     """
     Represents Chargify API Post Backs
-    @license    GNU General Public License
     """
     subscriptions = []
 
@@ -491,20 +490,19 @@ class ChargifyPostBack(ChargifyBase):
 class Chargify:
     """
     The Chargify class provides the main entry point to the Chargify API
-    @license    GNU General Public License
     """
     api_key = ''
     sub_domain = ''
 
-    def __init__(self, apikey=None, subdomain=None, cred_file=None):
+    def __init__(self, api_key=None, sub_domain=None, cred_file=None):
         '''
         We take either an api_key and sub_domain, or a path
         to a file with JSON that defines those two, or we throw
         an error.
         '''
-        if self.api_key and self.sub_domain:
-            self.api_key = apikey
-            self.sub_domain = subdomain
+        if api_key and sub_domain:
+            self.api_key = api_key
+            self.sub_domain = sub_domain
         elif cred_file:
             f = open(cred_file)
             credentials = json.loads(f.read())
