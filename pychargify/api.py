@@ -123,7 +123,7 @@ class Base(object):
 
         self.check_response_code(response.status_code)
 
-        return json.loads(response.content)
+        return response.json()
 
     def _post(self, url, data):
         """
