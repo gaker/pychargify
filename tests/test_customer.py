@@ -4,9 +4,11 @@ Test customer endpoint
 
 import datetime
 import json
-from nose.tools import raises
 import unittest
+
 from httpretty import HTTPretty, httprettified
+from nose.tools import raises
+
 from pychargify.api import Customer
 from pychargify.exceptions import ChargifyNotFound
 
@@ -95,3 +97,52 @@ class TestCustomer(unittest.TestCase):
 
         obj = Customer('1234', 'some-test')
         obj.get(id=1)
+
+    @httprettified
+    def test_create_user(self):
+        """
+        Test creating a new user
+        """
+
+        body = {"customer": {
+            "first_name": "John",
+            "last_name": "Coltrane",
+            "email": "john@example.com",
+            "address": "247 Candlewood Path",
+            "city": "Dix Hills",
+            "state": "NY",
+            "zip": '11746',
+            "country": "USA",
+            "phone": '555-555.1212',
+            "reference": "trane"
+        }}
+
+        HTTPretty.register_uri(
+            HTTPretty.POST,
+            "https://some-test.chargify.com/customers.json",
+            content_type='application/json',
+            body=json.dumps(body),
+            status=201
+        )
+
+        customer = Customer('1234', 'some-test')
+        customer.first_name = "John"
+        customer.last_name = "Coltrane"
+        customer.email = "john@example.com"
+        customer.address = "247 Candlewood Path"
+        customer.city = "Dix Hills"
+        customer.state = "NY"
+        customer.zip = '11746'
+        customer.country = "USA"
+        customer.phone = '555-555.1212'
+        customer.reference = "trane"
+        customer.save()
+
+    # @httprettified
+    # def test_update_customer(self):
+    #     """
+    #     Test updating a customer record
+    #     """
+    #     HTTPretty.register_uri(
+
+    #     )

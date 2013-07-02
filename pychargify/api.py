@@ -125,11 +125,19 @@ class Base(object):
 
         return response.json()
 
-    def _post(self, url, data):
+    def _post(self, url, payload):
         """
         Handle HTTP POST's to the API
         """
-        return self._request('POST', url, data)
+        response = requests.post(
+            "{0}/{1}".format(self.request_host, url.lstrip('/')),
+            auth=(self.api_key, 'x'),
+            headers=self.headers,
+            data=json.dumps(payload)
+        )
+
+        self.check_response_code(response.status_code)
+        return json.loads(response.content)
 
     def _put(self, url, payload):
         """
@@ -166,7 +174,7 @@ class Base(object):
         if self.id:
             return self._put(url, payload)
         else:
-            obj = self._post()
+            return self._post(url, payload)
 
 
 class Customer(Base):
