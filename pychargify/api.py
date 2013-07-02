@@ -210,7 +210,6 @@ class Customer(Base):
         """
         if not id:
             customers = self._get('customers.json')
-            print customers
             customer_list = set()
             for customer in customers:
                 customer_list.add(self.parse_fields(customer, 'customer'))

@@ -4,9 +4,11 @@ Test customer endpoint
 
 import datetime
 import json
+from nose.tools import raises
 import unittest
-from httpretty import HTTPretty
+from httpretty import HTTPretty, httprettified
 from pychargify.api import Customer
+from pychargify.exceptions import ChargifyNotFound
 
 
 class TestCustomer(unittest.TestCase):
@@ -35,11 +37,11 @@ class TestCustomer(unittest.TestCase):
         }
     ]
 
+    @httprettified
     def test_get_customers(self):
         """
         Test fetching a list of users.
         """
-        HTTPretty.enable()
         HTTPretty.register_uri(
             HTTPretty.GET,
             "https://some-test.chargify.com/customers.json",
@@ -53,3 +55,43 @@ class TestCustomer(unittest.TestCase):
 
         self.assertIsInstance(user.created_at, datetime.datetime)
         self.assertIsInstance(user.updated_at, datetime.datetime)
+
+        for k, v in self.customer_list[0]['customer'].iteritems():
+            if k not in ('created_at', 'updated_at'):
+                self.assertTrue(hasattr(user, k))
+                self.assertEqual(getattr(user, k), v)
+
+    @httprettified
+    def test_get_customer(self):
+        """
+        Test getting a specific customer
+        """
+
+        person = self.customer_list[0]
+
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            "https://some-test.chargify.com/customers/12345.json",
+            body=json.dumps(person)
+        )
+
+        obj = Customer('1234', 'some-test')
+        customer = obj.get(id=12345)
+
+        self.assertEqual(customer.id, person.get('customer').get('id'))
+
+    @httprettified
+    @raises(ChargifyNotFound)
+    def test_get_invalid_customer(self):
+        """
+        Attempting to fetch a customer that does not exist should
+        raise a :class:`ChargifyNotFound` exception
+        """
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            "https://some-test.chargify.com/customers/1.json",
+            status=404
+        )
+
+        obj = Customer('1234', 'some-test')
+        obj.get(id=1)
