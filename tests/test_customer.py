@@ -1,7 +1,7 @@
 """
 Test customer endpoint
 """
-
+from __future__ import unicode_literals
 import datetime
 import json
 import unittest
@@ -19,22 +19,22 @@ class TestCustomer(unittest.TestCase):
     """
     customer_list = [
         {
-            u'customer': {
-                u'city': u'Columbia',
-                u'first_name': u'Greg',
-                u'last_name': u'Aker',
-                u'zip': u'65202',
-                u'reference': u'greg1',
-                u'country': u'US',
-                u'created_at': u'2013-04-02T23:43:19-04:00',
-                u'updated_at': u'2013-06-30T16:29:00-04:00',
-                u'id': 12345,
-                u'phone': u'',
-                u'state': u'MO',
-                u'address_2': u'',
-                u'address': u'123 My Street',
-                u'organization': u'',
-                u'email': u'me@foobar.com'
+            'customer': {
+                'city': 'Columbia',
+                'first_name': 'Greg',
+                'last_name': 'Aker',
+                'zip': '65202',
+                'reference': 'greg1',
+                'country': 'US',
+                'created_at': '2013-04-02T23:43:19-04:00',
+                'updated_at': '2013-06-30T16:29:00-04:00',
+                'id': 12345,
+                'phone': '',
+                'state': 'MO',
+                'address_2': '',
+                'address': '123 My Street',
+                'organization': '',
+                'email': 'me@foobar.com'
             }
         }
     ]
@@ -58,7 +58,7 @@ class TestCustomer(unittest.TestCase):
         self.assertIsInstance(user.created_at, datetime.datetime)
         self.assertIsInstance(user.updated_at, datetime.datetime)
 
-        for k, v in self.customer_list[0]['customer'].iteritems():
+        for k, v in self.customer_list[0]['customer'].items():
             if k not in ('created_at', 'updated_at'):
                 self.assertTrue(hasattr(user, k))
                 self.assertEqual(getattr(user, k), v)

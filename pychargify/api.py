@@ -137,7 +137,7 @@ class Base(object):
         )
 
         self.check_response_code(response.status_code)
-        return json.loads(response.content)
+        return response.json()
 
     def _put(self, url, payload):
         """
@@ -151,7 +151,8 @@ class Base(object):
         )
 
         self.check_response_code(response.status_code)
-        return json.loads(response.content)
+        print(response.content)
+        return response.json()
 
     def _delete(self, url, data):
         """

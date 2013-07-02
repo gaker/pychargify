@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+import sys
 from setuptools import setup, find_packages
-
+from setuptools.command.test import test as TestCommand
 from pychargify import get_version
 
 
@@ -10,6 +11,5 @@ setup(
     description="",
     packages=find_packages(),
     test_suite='nose.collector',
-    test_require=['nose', 'httpretty'],
-    install_requires=['requests', 'python-dateutil', ],
+    install_requires=['requests==1.2.3', 'python-dateutil==2.1', ],
 )
