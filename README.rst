@@ -4,10 +4,15 @@ Chargify API wrapper for Python
 pychargify
 ----------
 
-This is a Python wrapper for the [Chargify](http://chargify.com) API. It allows you to interface
-with the Chargify API using a simple object orientated syntax.
+This is a Python wrapper for the `Chargify <http://chargify.com>`_ API. 
+It allows you to interface with the Chargify API using a simple object 
+orientated syntax.
 
-Add customer example
+
+Add customer
+++++++++++++
+
+::
 
     chargify = Chargify('YOUR-API-KEY', 'YOUR-SUB-DOMAIN')
 
@@ -17,7 +22,10 @@ Add customer example
     customer.email = 'john@doe.com'
     customer.save()
 
-Create a subscription example:
+Create a subscription
++++++++++++++++++++++
+
+::
 
     customer = chargify.Customer('customer_attributes')
     customer.first_name = 'Paul'
@@ -39,37 +47,27 @@ Create a subscription example:
 See tests.py for more usage examples.
 
 
-### Installation
+Installation
+------------
 
 Place this library in your project and import the module
 
     from pychargify.api import *
 
 
-### Requirements
+Requirements
+------------
 
-This library has no special requirements
+* requests
+* dateutil
 
-### Usage
+Usage
+-----
 
-Simply import this library before you use it:
+Documentation is in RestructuredText format in the docs directory.
 
-    from pychargify.api import *
-
-
-Now you'll have access to classes the interact with the Chargify API, such as:
-
-`Chargify`
-`Product`
-`Customer`
-`Subscription`
-`CreditCard`
-
-`Chargify` is a helper class that makes initialization easier of the `Product`, `Customer`,
-`Subscription` and `CreditCard` classes
-
-
-### Contributors
+Contributors
+------------
 
 * Paul Trippett (pyhub)  - Base Development
 * mrtron - Several Updates and bug fixes to pychargify library

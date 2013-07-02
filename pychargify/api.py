@@ -174,9 +174,11 @@ class Base(object):
 class Customer(Base):
     """
     Represents Chargify Customers
-    @license    GNU General Public License
+
+    See http://docs.chargify.com/api-customers
+
     """
-    __name__ = 'ChargifyCustomer'
+    __name__ = 'Customer'
     __attribute_types__ = {}
     __fields__ = [
         'id', 'first_name', 'last_name', 'email',
@@ -241,7 +243,6 @@ class Customer(Base):
 class Product(Base):
     """
     Represents Chargify Products
-    @license    GNU General Public License
     """
     __name__ = 'Product'
     __attribute_types__ = {}
@@ -249,9 +250,8 @@ class Product(Base):
         'id', 'price_in_cents', 'name', 'handle', 'description',
         'product_family', 'accounting_code', 'interval_unit', 'interval',
         'initial_charge_in_cents', 'trial_price_in_cents', 'trial_interval',
-        'trial_interval_unit', 'expiration_interval',
+        'trial_interval_unit', 'expiration_interval', 'archived_at',
         'expiration_interval_unit', 'return_url', 'created_at', 'updated_at',
-        'archived_at'
     ]
 
     id = None
