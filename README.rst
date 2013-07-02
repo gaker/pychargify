@@ -1,6 +1,9 @@
 Chargify API wrapper for Python
 ===============================
 
+.. image:: https://travis-ci.org/gaker/pychargify.png?branch=master
+    :target: https://travis-ci.org/gaker/pychargify
+
 pychargify
 ----------
 
