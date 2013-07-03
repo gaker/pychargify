@@ -151,7 +151,6 @@ class Base(object):
         )
 
         self.check_response_code(response.status_code)
-        print(response.content)
         return response.json()
 
     def _delete(self, url, data):

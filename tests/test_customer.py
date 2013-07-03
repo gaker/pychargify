@@ -168,3 +168,20 @@ class TestCustomer(unittest.TestCase):
 
         customer.reference = 'foobar'
         obj = customer.save()
+
+    @httprettified
+    def test_get_by_reference(self):
+        """
+        Test getting a user by reference.
+        """
+        person = self.customer_list[0]
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            "https://some-test.chargify.com/customers/lookup.json?reference=greg1",
+            body=json.dumps(person)
+        )
+
+        obj = Customer('1234', 'some-test')
+        customer = obj.get_by_reference('greg1')
+
+        self.assertEqual(customer.id, person['customer']['id'])

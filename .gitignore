@@ -2,5 +2,6 @@
 *.py[co]
 *.swp
 .tox/*
+cover/*
 credentials.json
 pychargify.egg-info/*
