@@ -24,7 +24,7 @@ from .exceptions import (
     ChargifyUnProcessableEntity, ChargifyServerError
 )
 
-import models
+from pychargify import models
 
 
 class Customer(models.Model):

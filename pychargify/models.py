@@ -47,7 +47,7 @@ class MetaClass(object):
         self.fields = kwargs.pop('fields')
 
         for item in dir(meta_cls):
-            if item not in ('__doc__', '__module__'):
+            if item not in ('__doc__', '__module__', '__weakref__'):
                 if not getattr(self, item, None):
                     setattr(self, item, getattr(meta_cls, item))
 
