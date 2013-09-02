@@ -18,22 +18,31 @@ class ChargifyField(object):
     def __init__(self, value=None):
         self.value = value
 
-    def __repr__(self):
-        return self.to_python()
+    # def __repr__(self):
+    #     return self.to_string()
 
-    def __string__(self):
+    def __str__(self):
         return self.value
 
     def to_python(self):
         return self.value or u''
+
+    def to_string(self):
+        return self.value or ''
 
 
 class ChargifyDateField(ChargifyField):
     """
 
     """
+    def __init__(self, value=None):
+        self.value = value
+
     def to_python(self):
-        return dateutil.parser.parse(self.value)
+        return dateutil.parser.parse(self.value) if self.value else None
+
+    def to_string(self):
+        return '' if not self.value else self.to_python().isoformat()
 
 
 class MetaClass(object):
@@ -42,6 +51,11 @@ class MetaClass(object):
         self.url = kwargs.pop('url')
         self.key = kwargs.pop('key')
         self.fields = kwargs.pop('fields')
+
+        for item in dir(meta_cls):
+            if item not in ('__doc__', '__module__'):
+                if not getattr(self, item, None):
+                    setattr(self, item, getattr(meta_cls, item))
 
 
 class ModelBase(type):
@@ -102,6 +116,16 @@ class Model(six.with_metaclass(ModelBase)):
             self.base_host
         )
 
+        fields = iter(self._meta.fields)
+        field_cache = self._meta.field_cache = {}
+
+        for field in fields:
+            field_cache.update({
+                field: getattr(self, field)
+            })
+            val = getattr(self, field).to_python()
+            setattr(self, field, val)
+
     def __repr__(self):
         return '<{0}: {1}>'.format(self.__class__.__name__, self.__unicode__())
 
@@ -116,11 +140,11 @@ class Model(six.with_metaclass(ModelBase)):
         if not url:
             raise ChargifyError('A URL is required in the model Meta class')
 
-        if not obj_id:
-            return url
+        if obj_id:
+            url_parts = url.split('.json')
+            return '{0}/{1}.json'.format(url_parts[0], obj_id)
 
-        url_parts = url.split('.json')
-        return '{0}/{1}.json'.format(url_parts[0], obj_id)
+        return url
 
     def get(self, id=None):
 
@@ -137,6 +161,15 @@ class Model(six.with_metaclass(ModelBase)):
             return self.parse(content.get(self._meta.key))
         else:
             return []
+
+    def save(self):
+        if hasattr(self, 'id') and isinstance(self.id, int):
+            url = self.setup_url(obj_id=self.id)
+        else:
+            url = self.setup_url()
+
+        obj = self._save(url, self._meta.key)
+        return self.parse(obj.get(self._meta.key))
 
     def check_response_code(self, status_code):
         """
@@ -226,9 +259,13 @@ class Model(six.with_metaclass(ModelBase)):
         """
         obj_dict = {}
 
-        for item in self.__fields__:
-            if item not in ('id', 'created_at', 'updated_at'):
-                obj_dict[item] = getattr(self, item)
+        for item in self._meta.fields:
+
+            if item not in self._meta.read_only_fields:
+
+                obj_dict.update({
+                    item: self._meta.field_cache.get(item).to_string()
+                })
 
         payload = {node_name: obj_dict}
 
@@ -238,8 +275,11 @@ class Model(six.with_metaclass(ModelBase)):
         return self._post(url, payload)
 
     def _set_val(self, name, value):
+        cls_field = self._meta.field_cache.get(name)
+        cls_field.value = value
+
         field = getattr(self, name)
-        field.value = value
+        field = cls_field.to_python()
         return field
 
     def parse(self, content):
@@ -249,6 +289,6 @@ class Model(six.with_metaclass(ModelBase)):
         new_class = self.__class__(self.api_key, self.sub_domain)
 
         for row in content:
-            setattr(getattr(new_class, row), row, self._set_val(row, content.get(row)))
+            setattr(new_class, row, self._set_val(row, content.get(row)))
 
         return new_class

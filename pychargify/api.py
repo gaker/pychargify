@@ -53,42 +53,23 @@ class Customer(models.Model):
     class Meta:
         url = 'customers.json'
         key = 'customer'
+        required_fields = ('first_name', 'last_name', 'email', )
+        read_only_fields = ('created_at', 'updated_at', 'id', )
 
     def __unicode__(self):
         return u'({0}) {1} {2}'.format(
             self.reference, self.first_name, self.last_name)
 
-    # def get(self, id=None):
-    #     """
-    #     Get a list of customers, or a customer by their internal id.
-    #     """
-    #     if not id:
-    #         customers = self._get('customers.json')
-    #         customer_list = set()
-    #         for customer in customers:
-    #             customer_list.add(self.parse_fields(customer, 'customer'))
-    #         return list(customer_list)
-
-    #     customer = self._get('customers/{0}.json'.format(str(id)))
-    #     return self.parse_fields(customer, 'customer')
-
-    # def get_by_reference(self, reference):
-    #     customer = self._get(
-    #         'customers/lookup.json?reference={0}'.format(reference)
-    #     )
-    #     return self.parse_fields(customer, 'customer')
+    def get_by_reference(self, reference):
+        self._meta.url = 'customers/lookup.json?reference={0}'.format(reference)
+        content = self.get()
+        # fix this
+        self._meta.url = 'customers.json'
+        return content
 
     # # def get_subscriptions(self):
     # #     obj = ChargifySubscription(self.api_key, self.sub_domain)
     # #     return obj.getByCustomerId(self.id)
-
-    # def save(self):
-    #     if self.id:
-    #         url = 'customers/{0}.json'.format(self.id)
-    #     else:
-    #         url = 'customers.json'
-    #     customer = self._save(url, 'customer')
-    #     return self.parse_fields(customer, 'customer')
 
 
 # class Product(models.Model):

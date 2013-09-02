@@ -28,6 +28,7 @@ class ChargifyError(Exception):
     pass
 
 
+
 class ChargifyUnAuthorized(ChargifyError):
     """
     Returned when API authentication has failed.
