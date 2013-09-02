@@ -73,4 +73,23 @@ class TestProducts(TestBase):
         subscriptions = obj.get(customer_id=12345)
         self.assertEqual(len(subscriptions), 2)
 
+    @httprettified
+    def test_create_subscription(self):
+        """
+        Test creating a subscription
+        """
+
+        HTTPretty.register_uri(
+            HTTPretty.POST,
+            'https://some-test.chargify.com/subscriptions.json',
+            body=json.dumps(self.subscriptions_list[0])
+        )
+
+        # customer = Customer('1234', 'some-test')
+        # customer.first_name = 'Greg'
+        # customer.last_name = 'Aker'
+        # customer.email = 'greg@gregaker.net'
+        # customer.save()
+
+        subscription = Subscription('1234', 'some-test')
 

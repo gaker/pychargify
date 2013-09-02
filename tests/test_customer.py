@@ -99,12 +99,12 @@ class TestCustomer(unittest.TestCase):
         obj.get(id=1)
 
     @httprettified
-    def test_create_user(self):
+    def test_create_customer(self):
         """
-        Test creating a new user
+        Test creating a new customer
         """
-
         body = {"customer": {
+            "id": 1234,
             "first_name": "John",
             "last_name": "Coltrane",
             "email": "john@example.com",
@@ -137,6 +137,8 @@ class TestCustomer(unittest.TestCase):
         customer.phone = '555-555.1212'
         customer.reference = "trane"
         customer.save()
+
+        self.assertEqual(customer.id, 1234)
 
     @httprettified
     def test_update_customer(self):

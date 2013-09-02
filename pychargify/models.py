@@ -1,4 +1,5 @@
 
+import datetime
 import six
 import json
 import requests
@@ -33,7 +34,9 @@ class ChargifyDateField(ChargifyField):
 
     """
     def to_python(self):
-        return dateutil.parser.parse(self.value) if self.value else None
+        if isinstance(self.value, (str, unicode)):
+            return dateutil.parser.parse(self.value) if self.value else None
+        return self.value
 
     def to_string(self):
         return '' if not self.value else self.to_python().isoformat()
@@ -45,6 +48,7 @@ class MetaClass(object):
         self.url = kwargs.pop('url')
         self.key = kwargs.pop('key')
         self.fields = kwargs.pop('fields')
+        self.field_cache = {}
         self.raw_content = None
 
         for item in dir(meta_cls):
@@ -121,6 +125,13 @@ class Model(six.with_metaclass(ModelBase)):
             val = getattr(self, field).to_python()
             setattr(self, field, val)
 
+    def __setattr__(self, key, value):
+        if key in self._meta.field_cache:
+            field = self._meta.field_cache.get(key)
+            field.value = value
+
+        super(Model, self).__setattr__(key, value)
+
     def __repr__(self):
         return '<{0}: {1}>'.format(self.__class__.__name__, self.__unicode__())
 
@@ -167,7 +178,7 @@ class Model(six.with_metaclass(ModelBase)):
             url = self.setup_url()
 
         obj = self._save(url, self._meta.key)
-        return self.parse(obj.get(self._meta.key))
+        return self.parse(obj.get(self._meta.key), create_new_class=False)
 
     def check_response_code(self, status_code):
         """
@@ -258,9 +269,7 @@ class Model(six.with_metaclass(ModelBase)):
         obj_dict = {}
 
         for item in self._meta.fields:
-
             if item not in self._meta.read_only_fields:
-
                 obj_dict.update({
                     item: self._meta.field_cache.get(item).to_string()
                 })
@@ -280,11 +289,14 @@ class Model(six.with_metaclass(ModelBase)):
         field = cls_field.to_python()
         return field
 
-    def parse(self, content):
+    def parse(self, content, create_new_class=True):
         """
         Parse the content of the API call.
         """
-        new_class = self.__class__(self.api_key, self.sub_domain)
+        if create_new_class:
+            klass = self.__class__(self.api_key, self.sub_domain)
+        else:
+            klass = self
         self._meta.raw_content = content
         for row in content:
             if self._meta.field_cache.get(row):
@@ -296,10 +308,10 @@ class Model(six.with_metaclass(ModelBase)):
                             self.api_key, self.sub_domain)
 
                         field_class.parse(content.get(row))
-                        setattr(new_class, row, field_class)
+                        setattr(klass, row, field_class)
                     else:
-                        setattr(new_class, row, self._set_val(row, content.get(row)))
+                        setattr(klass, row, self._set_val(row, content.get(row)))
                 else:
-                    setattr(new_class, row, self._set_val(row, content.get(row)))
+                    setattr(klass, row, self._set_val(row, content.get(row)))
 
-        return new_class
+        return klass
