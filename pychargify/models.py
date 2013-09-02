@@ -45,6 +45,7 @@ class MetaClass(object):
         self.url = kwargs.pop('url')
         self.key = kwargs.pop('key')
         self.fields = kwargs.pop('fields')
+        self.raw_content = None
 
         for item in dir(meta_cls):
             if item not in ('__doc__', '__module__', '__weakref__'):
@@ -281,8 +282,21 @@ class Model(six.with_metaclass(ModelBase)):
         Parse the content of the API call.
         """
         new_class = self.__class__(self.api_key, self.sub_domain)
+        self._meta.raw_content = content
         for row in content:
             if self._meta.field_cache.get(row):
-                setattr(new_class, row, self._set_val(row, content.get(row)))
+                if hasattr(self._meta, 'attribute_types'):
+                    if row in self._meta.attribute_types.keys():
+                        from pychargify import api
+                        field_class_name = self._meta.attribute_types.get(row)
+                        field_class = getattr(api, field_class_name)(
+                            self.api_key, self.sub_domain)
+
+                        field_class.parse(content.get(row))
+                        setattr(new_class, row, field_class)
+                    else:
+                        setattr(new_class, row, self._set_val(row, content.get(row)))
+                else:
+                    setattr(new_class, row, self._set_val(row, content.get(row)))
 
         return new_class

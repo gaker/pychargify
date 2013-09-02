@@ -93,9 +93,9 @@ class Product(models.Model):
     expiration_interval_unit = models.ChargifyField(value='day')  # month or day
     return_url = models.ChargifyField(value='')
     require_credit_card = models.ChargifyField(value=True)
-    created_at = models.ChargifyField()
-    updated_at = models.ChargifyField()
-    archived_at = models.ChargifyField()
+    created_at = models.ChargifyDateField()
+    updated_at = models.ChargifyDateField()
+    archived_at = models.ChargifyDateField()
 
     class Meta:
         url = 'products.json'
@@ -128,59 +128,48 @@ class Product(models.Model):
 #         self.memo = memo
 
 
-# class Subscription(models.Model):
-#     """
-#     Represents Chargify Subscriptions
-#     """
-#     id = None
-#     activated_at = None
-#     created_at = None
-#     balance_in_cents = None
-#     cancel_at_end_of_period = None
-#     canceled_at = None
-#     cancellation_message = None
-#     coupon_code = None
-#     credit_card = None
-#     current_period_ends_at = None
-#     current_period_started_at = None
-#     customer = None
-#     delayed_cancel_at = None
-#     expires_at = None
-#     next_assessment_at = None
-#     payment_collection_method = None
-#     previous_state = None
-#     product = None
-#     signup_payment_id = None
-#     signup_revenue = None
-#     state = None
-#     total_revenue_in_cents = None
-#     trial_ended_at = None
-#     trial_started_at = None
-#     updated_at = None
+class Subscription(models.Model):
+    """
+    Represents Chargify Subscriptions
+    """
+    id = models.ChargifyField()
+    activated_at = models.ChargifyDateField()
+    created_at = models.ChargifyDateField()
+    balance_in_cents = models.ChargifyField()
+    cancel_at_end_of_period = models.ChargifyField()
+    canceled_at = models.ChargifyField()
+    cancellation_message = models.ChargifyField()
+    coupon_code = models.ChargifyField()
+    credit_card = models.ChargifyField()
+    current_period_ends_at = models.ChargifyDateField()
+    current_period_started_at = models.ChargifyDateField()
+    customer = models.ChargifyField()
+    delayed_cancel_at = models.ChargifyDateField()
+    expires_at = models.ChargifyDateField()
+    next_assessment_at = models.ChargifyDateField()
+    payment_collection_method = models.ChargifyField()
+    previous_state = models.ChargifyField()
+    product = models.ChargifyField()
+    signup_payment_id = models.ChargifyField()
+    signup_revenue = models.ChargifyField()
+    state = models.ChargifyField()
+    total_revenue_in_cents = models.ChargifyField()
+    trial_ended_at = models.ChargifyDateField()
+    trial_started_at = models.ChargifyDateField()
+    updated_at = models.ChargifyDateField()
 
-#     class Meta:
-#         url = 'subscriptions.json'
-#         attribute_types = {
-#             'customer': 'ChargifyCustomer',
-#             'product': 'ChargifyProduct',
-#             'credit_card': 'ChargifyCreditCard'
-#         }
+    class Meta:
+        url = 'subscriptions.json'
+        key = 'subscription'
+        attribute_types = {
+            'customer': 'Customer',
+            'product': 'Product',
+            # 'credit_card': 'ChargifyCreditCard'
+        }
 
-#     def __unicode__(self):
-#         return u'{0}-{1}'.format(self.product, self.customer)
-
-#     def get(self, id=None):
-#         if not id:
-#             subscriptions = self._get('subscriptions.json')
-#             subscriptions_list = set()
-#             for subscription in subscriptions:
-#                 subscriptions_list.add(
-#                     self.parse_fields(subscription, 'subscription'))
-
-#             return list(subscriptions_list)
-
-#         subscriptions = self._get('subscriptions/{0}.json'.format(id))
-#         return self.parse_fields(subscription, 'subscription')
+    def __unicode__(self):
+        return u'{0}-{1}'.format(
+            self.product.__unicode__(), self.customer.__unicode__())
 
 #     def createUsage(self, component_id, quantity, memo=None):
 #         """
