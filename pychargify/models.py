@@ -18,9 +18,6 @@ class ChargifyField(object):
     def __init__(self, value=None):
         self.value = value
 
-    # def __repr__(self):
-    #     return self.to_string()
-
     def __str__(self):
         return self.value
 
@@ -35,9 +32,6 @@ class ChargifyDateField(ChargifyField):
     """
 
     """
-    def __init__(self, value=None):
-        self.value = value
-
     def to_python(self):
         return dateutil.parser.parse(self.value) if self.value else None
 
