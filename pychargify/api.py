@@ -67,67 +67,44 @@ class Customer(models.Model):
         self._meta.url = 'customers.json'
         return content
 
-    # # def get_subscriptions(self):
-    # #     obj = ChargifySubscription(self.api_key, self.sub_domain)
-    # #     return obj.getByCustomerId(self.id)
+    # def get_subscriptions(self):
+    #     obj = ChargifySubscription(self.api_key, self.sub_domain)
+    #     return obj.getByCustomerId(self.id)
 
 
-# class Product(models.Model):
-#     """
-#     Represents Chargify Products
-#     """
-#     __name__ = 'Product'
-#     __attribute_types__ = {}
-#     __fields__ = [
-#         'id', 'price_in_cents', 'name', 'handle', 'description',
-#         'product_family', 'accounting_code', 'interval_unit', 'interval',
-#         'initial_charge_in_cents', 'trial_price_in_cents', 'trial_interval',
-#         'trial_interval_unit', 'expiration_interval', 'archived_at',
-#         'expiration_interval_unit', 'return_url', 'created_at', 'updated_at',
-#     ]
+class Product(models.Model):
+    """
+    Represents Chargify Products
+    """
+    id = models.ChargifyField()
+    price_in_cents = models.ChargifyField(value=0)
+    name = models.ChargifyField()
+    handle = models.ChargifyField()
+    description = models.ChargifyField()
+    product_family = models.ChargifyField(value={})
+    accounting_code = models.ChargifyField()
+    interval_unit = models.ChargifyField(value='day')  # month or day
+    interval = models.ChargifyField(value=30)
+    initial_charge_in_cents = models.ChargifyField(value=0)
+    trial_price_in_cents = models.ChargifyField(value=0)
+    trial_interval = models.ChargifyField(value=0)
+    trial_interval_unit = models.ChargifyField(value='day') # month or day
+    expiration_interval = models.ChargifyField(value=0)
+    expiration_interval_unit = models.ChargifyField(value='day')  # month or day
+    return_url = models.ChargifyField(value='')
+    require_credit_card = models.ChargifyField(value=True)
+    created_at = models.ChargifyField()
+    updated_at = models.ChargifyField()
+    archived_at = models.ChargifyField()
 
-#     id = None
-#     price_in_cents = 0
-#     name = None
-#     handle = None
-#     description = None
-#     product_family = {}
-#     accounting_code = None
-#     interval_unit = 'day'  # month or day
-#     interval = 30
-#     initial_charge_in_cents = 0
-#     trial_price_in_cents = 0
-#     trial_interval = 0
-#     trial_interval_unit = 'day'  # month or day
-#     expiration_interval = 0
-#     expiration_interval_unit = 'day'  # month or day
-#     return_url = ''
-#     require_credit_card = True
-#     created_at = None
-#     updated_at = None
-#     archived_at = None
+    class Meta:
+        url = 'products.json'
+        key = 'product'
+        required_fields = ()
+        read_only_fields = ('id', )
 
-#     def __repr__(self):
-#         return '<{0} {1}>'.format(
-#             self.__name__, self.name
-#         )
-
-#     def get(self, id=None):
-#         """
-#         Get a list of Products or a single product
-#         """
-#         if not id:
-#             products = self._get('products.json')
-#             product_list = set()
-#             for product in products:
-#                 product_list.add(self.parse_fields(product, 'product'))
-#             return list(product_list)
-
-#         product = self._get('products/{0}.json'.format(id))
-#         return self.parse_fields(product, 'product')
-
-#     def save(self):
-#         return self._save('products', 'product')
+    def __unicode__(self):
+        return self.name
 
     # def getByHandle(self, handle):
     #     return self._applyS(self._get('/products/handle/' + str(handle) +

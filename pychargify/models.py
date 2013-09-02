@@ -287,8 +287,8 @@ class Model(six.with_metaclass(ModelBase)):
         Parse the content of the API call.
         """
         new_class = self.__class__(self.api_key, self.sub_domain)
-
         for row in content:
-            setattr(new_class, row, self._set_val(row, content.get(row)))
+            if self._meta.field_cache.get(row):
+                setattr(new_class, row, self._set_val(row, content.get(row)))
 
         return new_class
