@@ -11,7 +11,7 @@ setup(
     description="",
     packages=find_packages(),
     test_suite='nose.collector',
-    install_requires=['requests==1.2.3', 'python-dateutil==2.1', ],
+    install_requires=['requests==1.2.3', 'python-dateutil==2.1', 'six'],
     tests_require=['nose', 'httpretty', ],
     dependency_links=[
         'git+https://github.com/gabrielfalcao/HTTPretty.git#egg=httpretty'
