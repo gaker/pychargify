@@ -171,6 +171,17 @@ class Subscription(models.Model):
         return u'{0}-{1}'.format(
             self.product.__unicode__(), self.customer.__unicode__())
 
+    def get(self, id=None, customer_id=None):
+        """
+        Subscriptions can be fetched by subscription or customer id.
+        """
+        if not customer_id:
+            return super(Subscription, self).get(id=id)
+
+        url = 'customers/{0}/subscriptions.json'.format(customer_id)
+        content = self._get(url)
+        return self.process_result(content)
+
 #     def createUsage(self, component_id, quantity, memo=None):
 #         """
 #         Creates usage for the given component id.
@@ -278,25 +289,25 @@ class Subscription(models.Model):
 #             self.__name__, "subscription")
 
 
-class PostBack(models.Model):
-    """
-    Represents Chargify API Post Backs
-    """
-    subscriptions = []
+# class PostBack(models.Model):
+#     """
+#     Represents Chargify API Post Backs
+#     """
+#     subscriptions = []
 
-    def __init__(self, apikey, subdomain, postback_data):
-        super(PostBack, self).__init__(apikey, subdomain)
-        if postback_data:
-            self._process_postback_data(postback_data)
+#     def __init__(self, apikey, subdomain, postback_data):
+#         super(PostBack, self).__init__(apikey, subdomain)
+#         if postback_data:
+#             self._process_postback_data(postback_data)
 
-    def _process_postback_data(self, data):
-        """
-        Process the Json array and fetches the Subscription Objects
-        """
-        csub = ChargifySubscription(self.api_key, self.sub_domain)
-        postdata_objects = json.loads(data)
-        for obj in postdata_objects:
-            self.subscriptions.append(csub.getBySubscriptionId(obj))
+#     def _process_postback_data(self, data):
+#         """
+#         Process the Json array and fetches the Subscription Objects
+#         """
+#         csub = ChargifySubscription(self.api_key, self.sub_domain)
+#         postdata_objects = json.loads(data)
+#         for obj in postdata_objects:
+#             self.subscriptions.append(csub.getBySubscriptionId(obj))
 
 
 class Chargify(object):

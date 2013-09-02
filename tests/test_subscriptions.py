@@ -25,12 +25,13 @@ class TestProducts(TestBase):
         obj = Subscription('1234', 'some-test')
         subscriptions = obj.get()
 
-        self.assertEqual(len(subscriptions), 1)
+        self.assertEqual(len(subscriptions), 2)
 
         subscription = subscriptions[0]
 
         self.assertIsInstance(subscription.customer, Customer)
         self.assertIsInstance(subscription.product, Product)
+        self.assertIsInstance(subscription.updated_at, datetime.datetime)
 
     @httprettified
     def test_get_subscription(self):
@@ -49,4 +50,27 @@ class TestProducts(TestBase):
         self.assertIsInstance(subscription.customer, Customer)
         self.assertIsInstance(subscription.product, Product)
 
-    #     self.assertTrue(product.require_credit_card)
+    @httprettified
+    def test_get_subscription_by_customer_id(self):
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            'https://some-test.chargify.com/customers/1/subscriptions.json',
+            body=json.dumps([])
+        )
+
+        obj = Subscription('1234', 'some-test')
+        subscriptions = obj.get(customer_id=1)
+
+        self.assertEqual(len(subscriptions), 0)
+
+        HTTPretty.register_uri(
+            HTTPretty.GET,
+            'https://some-test.chargify.com/customers/12345/subscriptions.json',
+            body=json.dumps(self.subscriptions_list)
+        )
+
+        obj = Subscription('1234', 'some-test')
+        subscriptions = obj.get(customer_id=12345)
+        self.assertEqual(len(subscriptions), 2)
+
+

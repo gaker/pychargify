@@ -141,11 +141,7 @@ class Model(six.with_metaclass(ModelBase)):
 
         return url
 
-    def get(self, id=None):
-
-        url = self.setup_url(obj_id=id)
-        content = self._get(url)
-
+    def process_result(self, content):
         if isinstance(content, list):
             out = []
             for obj in content:
@@ -156,6 +152,13 @@ class Model(six.with_metaclass(ModelBase)):
             return self.parse(content.get(self._meta.key))
         else:
             return []
+
+    def get(self, id=None):
+
+        url = self.setup_url(obj_id=id)
+        content = self._get(url)
+
+        return self.process_result(content)
 
     def save(self):
         if hasattr(self, 'id') and isinstance(self.id, int):
