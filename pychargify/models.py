@@ -34,7 +34,7 @@ class ChargifyDateField(ChargifyField):
 
     """
     def to_python(self):
-        if isinstance(self.value, (str, unicode)):
+        if isinstance(self.value, six.text_type):
             return dateutil.parser.parse(self.value) if self.value else None
         return self.value
 
