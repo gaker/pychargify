@@ -78,7 +78,7 @@ class TestCustomer(unittest.TestCase):
         )
 
         obj = Customer('1234', 'some-test')
-        customer = obj.get(id=12345)
+        customer = obj.get(object_id=12345)
 
         self.assertEqual(customer.id, person.get('customer').get('id'))
 
@@ -96,7 +96,7 @@ class TestCustomer(unittest.TestCase):
         )
 
         obj = Customer('1234', 'some-test')
-        obj.get(id=1)
+        obj.get(object_id=1)
 
     @httprettified
     def test_create_customer(self):
@@ -155,7 +155,7 @@ class TestCustomer(unittest.TestCase):
         )
 
         obj = Customer('1234', 'some-test')
-        customer = obj.get(id=12345)
+        customer = obj.get(object_id=12345)
 
         updated_person = person.copy()
         updated_person['reference'] = 'foobar'

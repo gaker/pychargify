@@ -1,20 +1,53 @@
-
-import datetime
+"""
+Chargify base models
+"""
 import six
 import json
 import requests
 import dateutil.parser
 
-from pychargify import get_version
-from pychargify.exceptions import (
-    ChargifyError, ChargifyUnAuthorized,
-    ChargifyForbidden, ChargifyNotFound,
-    ChargifyUnProcessableEntity, ChargifyServerError
-)
+from pychargify import get_version, exceptions
+
+
+def headers():
+    """
+    Headers to send on every request
+    """
+    return {
+        'user-agent': "pyChargify/{0}".format(get_version()),
+        'content-type': 'application/json'
+    }
+
+
+def check_response_code(status_code):
+    """
+    Helper method to check response code errors after
+    API calls.
+    """
+    # Unauthorized Error
+    if status_code == 401:
+        raise exceptions.ChargifyUnAuthorized()
+
+    # Forbidden Error
+    elif status_code == 403:
+        raise exceptions.ChargifyForbidden()
+
+    # Not Found Error
+    elif status_code == 404:
+        raise exceptions.ChargifyNotFound()
+
+    # Unprocessable Entity Error
+    elif status_code == 422:
+        raise exceptions.ChargifyUnProcessableEntity()
+
+    # Generic Server Errors
+    elif status_code in [405, 500]:
+        raise exceptions.ChargifyServerError()
+
 
 class ChargifyField(object):
     """
-
+    Base Field used in model
     """
     def __init__(self, value=None):
         self.value = value
@@ -23,15 +56,23 @@ class ChargifyField(object):
         return self.value
 
     def to_python(self):
+        """
+        Create a python representation of the value.
+
+        Override this to handle different data types.
+        """
         return self.value or u''
 
     def to_string(self):
+        """
+        Return the python representation to a string.
+        """
         return self.value or ''
 
 
 class ChargifyDateField(ChargifyField):
     """
-
+    Converts Date strings from chargify into python datetime objects.
     """
     def to_python(self):
         if isinstance(self.value, six.text_type):
@@ -42,9 +83,12 @@ class ChargifyDateField(ChargifyField):
         return '' if not self.value else self.to_python().isoformat()
 
 
+#pylint: disable=R0903
 class MetaClass(object):
-
-    def __init__(self, meta_cls, **kwargs):
+    """
+    Meta options class used when instantiating a model
+    """
+    def __init__(self, meta_cls, **kwargs):  # pylint: disable=W0142
         self.url = kwargs.pop('url')
         self.key = kwargs.pop('key')
         self.fields = kwargs.pop('fields')
@@ -97,7 +141,9 @@ class ModelBase(type):
 
 
 class Model(six.with_metaclass(ModelBase)):
-
+    """
+    Model
+    """
     api_key = ''
     sub_domain = ''
     base_host = '.chargify.com'
@@ -138,13 +184,19 @@ class Model(six.with_metaclass(ModelBase)):
     def __str__(self):
         return '{0} object'.format(self.__class__.__name__)
 
+    # pylint: disable=R0201
     def __unicode__(self):
         return u''
 
     def setup_url(self, obj_id=None):
+        """
+        Automatically change the URL set on the inner meta class when an ID
+        is set.
+        """
         url = getattr(self._meta, 'url', None)
         if not url:
-            raise ChargifyError('A URL is required in the model Meta class')
+            raise exceptions.ChargifyError(
+                'A URL is required in the model Meta class')
 
         if obj_id:
             url_parts = url.split('.json')
@@ -153,6 +205,9 @@ class Model(six.with_metaclass(ModelBase)):
         return url
 
     def process_result(self, content):
+        """
+        Turn the raw JSON into model classes
+        """
         if isinstance(content, list):
             out = []
             for obj in content:
@@ -164,14 +219,24 @@ class Model(six.with_metaclass(ModelBase)):
         else:
             return []
 
-    def get(self, id=None):
+    def get(self, object_id=None):
+        """
+        Performs an HTTP GET request.
 
-        url = self.setup_url(obj_id=id)
+        If an ``object_id`` keyword argument is present, the URL will be
+        automatically changed to GET the specific ID.
+        """
+        url = self.setup_url(obj_id=object_id)
         content = self._get(url)
-
         return self.process_result(content)
 
     def save(self):
+        """
+        "Save" this object by performing an API call.
+
+        If the ``id`` attr is on the object, alter the URL.
+        """
+        # pylint: disable=E1101
         if hasattr(self, 'id') and isinstance(self.id, int):
             url = self.setup_url(obj_id=self.id)
         else:
@@ -180,41 +245,6 @@ class Model(six.with_metaclass(ModelBase)):
         obj = self._save(url, self._meta.key)
         return self.parse(obj.get(self._meta.key), create_new_class=False)
 
-    def check_response_code(self, status_code):
-        """
-        Helper method to check response code errors after
-        API calls.
-        """
-        # Unauthorized Error
-        if status_code == 401:
-            raise ChargifyUnAuthorized()
-
-        # Forbidden Error
-        elif status_code == 403:
-            raise ChargifyForbidden()
-
-        # Not Found Error
-        elif status_code == 404:
-            raise ChargifyNotFound()
-
-        # Unprocessable Entity Error
-        elif status_code == 422:
-            raise ChargifyUnProcessableEntity()
-
-        # Generic Server Errors
-        elif status_code in [405, 500]:
-            raise ChargifyServerError()
-
-    @property
-    def headers(self):
-        """
-        Headers to send on every request
-        """
-        return {
-            'user-agent': "pyChargify/{0}".format(get_version()),
-            'content-type': 'application/json'
-        }
-
     def _get(self, url):
         """
         Handle HTTP GET's to the API
@@ -222,9 +252,9 @@ class Model(six.with_metaclass(ModelBase)):
         response = requests.get(
             "{0}/{1}".format(self.request_host, url.lstrip('/')),
             auth=(self.api_key, 'x'),
-            headers=self.headers)
+            headers=headers())
 
-        self.check_response_code(response.status_code)
+        check_response_code(response.status_code)
 
         return response.json()
 
@@ -235,11 +265,11 @@ class Model(six.with_metaclass(ModelBase)):
         response = requests.post(
             "{0}/{1}".format(self.request_host, url.lstrip('/')),
             auth=(self.api_key, 'x'),
-            headers=self.headers,
+            headers=headers(),
             data=json.dumps(payload)
         )
 
-        self.check_response_code(response.status_code)
+        check_response_code(response.status_code)
         return response.json()
 
     def _put(self, url, payload):
@@ -249,18 +279,18 @@ class Model(six.with_metaclass(ModelBase)):
         response = requests.put(
             "{0}/{1}".format(self.request_host, url.lstrip('/')),
             auth=(self.api_key, 'x'),
-            headers=self.headers,
+            headers=headers(),
             data=json.dumps(payload)
         )
 
-        self.check_response_code(response.status_code)
+        check_response_code(response.status_code)
         return response.json()
 
-    def _delete(self, url, data):
-        """
-        Handle HTTP DELETE's to the API
-        """
-        return self._request('DELETE', url, data)
+    # def _delete(self, url, data):
+    #     """
+    #     Handle HTTP DELETE's to the API
+    #     """
+    #     return self._request('DELETE', url, data)
 
     def _save(self, url, node_name):
         """
@@ -276,12 +306,17 @@ class Model(six.with_metaclass(ModelBase)):
 
         payload = {node_name: obj_dict}
 
+        # pylint: disable=E1101
         if self.id:
             return self._put(url, payload)
 
         return self._post(url, payload)
 
     def _set_val(self, name, value):
+        """
+        Set the value on the class object as well as the Meta field cache
+        object.
+        """
         cls_field = self._meta.field_cache.get(name)
         cls_field.value = value
 
@@ -310,7 +345,8 @@ class Model(six.with_metaclass(ModelBase)):
                         field_class.parse(content.get(row))
                         setattr(klass, row, field_class)
                     else:
-                        setattr(klass, row, self._set_val(row, content.get(row)))
+                        setattr(klass,
+                                row, self._set_val(row, content.get(row)))
                 else:
                     setattr(klass, row, self._set_val(row, content.get(row)))
 

@@ -16,7 +16,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 Created on Nov 20, 2009
 Author: Paul Trippett (paul@pyhub.com)
+
+Forked 2013
+Author: Greg Aker (me@gregaker.net)
 '''
 
 def get_version():
+    """
+    Return pychargify version
+    """
     return "1.0.0"

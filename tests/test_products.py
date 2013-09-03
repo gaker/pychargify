@@ -42,6 +42,6 @@ class TestProducts(TestBase):
             body=json.dumps(self.products_list[0]))
 
         obj = Product('1234', 'some-test')
-        product = obj.get(id=2)
+        product = obj.get(object_id=2)
 
         self.assertTrue(product.require_credit_card)

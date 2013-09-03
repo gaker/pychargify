@@ -18,12 +18,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 Created on Nov 20, 2009
 Author: Paul Trippett (paul@pyhub.com)
 '''
-from .exceptions import (
-    ChargifyError, ChargifyUnAuthorized,
-    ChargifyForbidden, ChargifyNotFound,
-    ChargifyUnProcessableEntity, ChargifyServerError
-)
-
+import json
 from pychargify import models
 
 
@@ -50,6 +45,7 @@ class Customer(models.Model):
     created_at = models.ChargifyDateField()
     updated_at = models.ChargifyDateField()
 
+    # pylint: disable=W0232,R0903
     class Meta:
         url = 'customers.json'
         key = 'customer'
@@ -61,7 +57,11 @@ class Customer(models.Model):
             self.reference, self.first_name, self.last_name)
 
     def get_by_reference(self, reference):
-        self._meta.url = 'customers/lookup.json?reference={0}'.format(reference)
+        """
+        Get a user by their reference name
+        """
+        self._meta.url = 'customers/lookup.json?reference={0}'.format(
+            reference)
         content = self.get()
         # fix this
         self._meta.url = 'customers.json'
@@ -90,13 +90,14 @@ class Product(models.Model):
     trial_interval = models.ChargifyField(value=0)
     trial_interval_unit = models.ChargifyField(value='day') # month or day
     expiration_interval = models.ChargifyField(value=0)
-    expiration_interval_unit = models.ChargifyField(value='day')  # month or day
+    expiration_interval_unit = models.ChargifyField(value='day')  # m or day
     return_url = models.ChargifyField(value='')
     require_credit_card = models.ChargifyField(value=True)
     created_at = models.ChargifyDateField()
     updated_at = models.ChargifyDateField()
     archived_at = models.ChargifyDateField()
 
+    # pylint: disable=W0232,R0903
     class Meta:
         url = 'products.json'
         key = 'product'
@@ -105,20 +106,6 @@ class Product(models.Model):
 
     def __unicode__(self):
         return self.name
-
-    # def getByHandle(self, handle):
-    #     return self._applyS(self._get('/products/handle/' + str(handle) +
-    #         '.xml'), self.__name__, 'product')
-
-    # def getPaymentPageUrl(self):
-    #     return ('https://' + self.request_host + '/h/' +
-    #         self.id + '/subscriptions/new')
-
-    # def getPriceInDollars(self):
-    #     return round(float(self.price_in_cents) / 100, 2)
-
-    # def getFormattedPrice(self):
-    #     return "$%.2f" % (self.getPriceInDollars())
 
 
 # class Usage(object):
@@ -158,6 +145,7 @@ class Subscription(models.Model):
     trial_started_at = models.ChargifyDateField()
     updated_at = models.ChargifyDateField()
 
+    # pylint: disable=W0232,R0903
     class Meta:
         url = 'subscriptions.json'
         key = 'subscription'
@@ -168,75 +156,20 @@ class Subscription(models.Model):
         }
 
     def __unicode__(self):
+        # pylint: disable=E1101
         return u'{0}-{1}'.format(
             self.product.__unicode__(), self.customer.__unicode__())
 
-    def get(self, id=None, customer_id=None):
+    def get(self, object_id=None, customer_id=None):
         """
         Subscriptions can be fetched by subscription or customer id.
         """
         if not customer_id:
-            return super(Subscription, self).get(id=id)
+            return super(Subscription, self).get(object_id=object_id)
 
         url = 'customers/{0}/subscriptions.json'.format(customer_id)
         content = self._get(url)
         return self.process_result(content)
-
-#     def createUsage(self, component_id, quantity, memo=None):
-#         """
-#         Creates usage for the given component id.
-#         """
-
-#         data = '''<?xml version="1.0" encoding="UTF-8"?><usage>
-#             <quantity>%d</quantity><memo>%s</memo></usage>''' % (
-#                 quantity, memo or "")
-
-#         dom = minidom.parseString(self.fix_xml_encoding(
-#             self._post('/subscriptions/%s/components/%d/usages.xml' % (
-#                 str(self.id), component_id), data)))
-
-#         return [Usage(*tuple(chain.from_iterable([[x.data
-#             for x in i.childNodes] or [None] for i in n.childNodes])))
-#             for n in dom.getElementsByTagName('usage')]
-
-#     def getByCustomerId(self, customer_id):
-#         return self._applyA(self._get('/customers/' + str(customer_id) +
-#             '/subscriptions.xml'), self.__name__, 'subscription')
-
-#     def getBySubscriptionId(self, subscription_id):
-#         #Throws error if more than element is returned
-#         i, = self._applyA(self._get('/subscriptions/' + str(subscription_id) +
-#             '.xml'), self.__name__, 'subscription')
-#         return i
-
-#     def save(self):
-#         return self._save('subscriptions', 'subscription')
-
-#     def resetBalance(self):
-#         self._put("/subscriptions/" + self.id + "/reset_balance.xml", "")
-
-#     def reactivate(self):
-#         self._put("/subscriptions/" + self.id + "/reactivate.xml", "")
-
-#     def upgrade(self, toProductHandle):
-#         xml = """<?xml version="1.0" encoding="UTF-8"?>
-#   <subscription>
-#     <product_handle>%s</product_handle>
-#   </subscription>""" % (toProductHandle)
-#         #end improper indentation
-
-#         return self._applyS(self._put("/subscriptions/" + self.id + ".xml",
-#             xml), self.__name__, "subscription")
-
-#     def unsubscribe(self, message):
-#         xml = """<?xml version="1.0" encoding="UTF-8"?>
-# <subscription>
-#   <cancellation_message>
-#     %s
-#   </cancellation_message>
-# </subscription>""" % (message)
-
-#         self._delete("/subscriptions/" + self.id + ".xml", xml)
 
 
 # class CreditCard(models.Model):
@@ -327,25 +260,41 @@ class Chargify(object):
             self.api_key = api_key
             self.sub_domain = sub_domain
         elif cred_file:
-            f = open(cred_file)
-            credentials = json.loads(f.read())
+            file_ = open(cred_file)
+            credentials = json.loads(file_.read())
             self.api_key = credentials['api_key']
             self.sub_domain = credentials['sub_domain']
         else:
-            print("Need either an api_key and subdomain, or credential file. Exiting.")
+            print("Need either an api_key and subdomain, "
+                "or credential file. Exiting.")
             exit()
 
     def customer(self, nodename=''):
+        """
+        Shortcut method to get the ``Customer`` object
+        """
         return Customer(self.api_key, self.sub_domain, nodename)
 
     def product(self, nodename=''):
+        """
+        Shortcut method to get the ``Product`` object
+        """
         return Product(self.api_key, self.sub_domain, nodename)
 
     def subscription(self, nodename=''):
+        """
+        Shortcut method to get the ``Subscription`` object
+        """
         return Subscription(self.api_key, self.sub_domain, nodename)
 
-    def credit_card(self, nodename=''):
-        return CreditCard(self.api_key, self.sub_domain, nodename)
+    # def credit_card(self, nodename=''):
+    #     """
+    #     Shortcut method to get the ``CreditCard`` object
+    #     """
+    #     return CreditCard(self.api_key, self.sub_domain, nodename)
 
-    def post_back(self, postbackdata):
-        return PostBack(self.api_key, self.sub_domain, postbackdata)
+    # def post_back(self, postbackdata):
+    #     """
+    #     Shortcut method to get the ``PostBack`` object
+    #     """
+    #     return PostBack(self.api_key, self.sub_domain, postbackdata)

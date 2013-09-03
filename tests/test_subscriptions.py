@@ -45,7 +45,7 @@ class TestProducts(TestBase):
         )
 
         obj = Subscription('1234', 'some-test')
-        subscription = obj.get(id=123)
+        subscription = obj.get(object_id=123)
 
         self.assertIsInstance(subscription.customer, Customer)
         self.assertIsInstance(subscription.product, Product)
@@ -73,23 +73,36 @@ class TestProducts(TestBase):
         subscriptions = obj.get(customer_id=12345)
         self.assertEqual(len(subscriptions), 2)
 
-    @httprettified
-    def test_create_subscription(self):
-        """
-        Test creating a subscription
-        """
+    # @httprettified
+    # def test_create_subscription(self):
+    #     """
+    #     Test creating a subscription
+    #     """
+    #     post_body = {
+    #         'subscription': {
+    #             'product_handle': 'super-widget-1',
+    #             'customer_id': 12345,
+    #             'credit_card_attributes': {
+    #                 'full_number': "1234",
+    #                 'expiration_month': "10",
+    #                 'expiration_year': '2020'
+    #             }
+    #         }
+    #     }
 
-        HTTPretty.register_uri(
-            HTTPretty.POST,
-            'https://some-test.chargify.com/subscriptions.json',
-            body=json.dumps(self.subscriptions_list[0])
-        )
+    #     HTTPretty.register_uri(
+    #         HTTPretty.POST,
+    #         'https://some-test.chargify.com/subscriptions.json',
+    #         body=json.dumps(self.subscriptions_list[0])
+    #     )
 
-        # customer = Customer('1234', 'some-test')
-        # customer.first_name = 'Greg'
-        # customer.last_name = 'Aker'
-        # customer.email = 'greg@gregaker.net'
-        # customer.save()
 
-        subscription = Subscription('1234', 'some-test')
+
+    #     # customer = Customer('1234', 'some-test')
+    #     # customer.first_name = 'Greg'
+    #     # customer.last_name = 'Aker'
+    #     # customer.email = 'greg@gregaker.net'
+    #     # customer.save()
+
+    #     subscription = Subscription('1234', 'some-test')
 
