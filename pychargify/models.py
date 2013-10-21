@@ -245,17 +245,23 @@ class Model(six.with_metaclass(ModelBase)):
         obj = self._save(url, self._meta.key)
         return self.parse(obj.get(self._meta.key), create_new_class=False)
 
-    def _get(self, url):
+    def _get(self, url, **headers_kwargs):
         """
         Handle HTTP GET's to the API
         """
+        call_headers = headers()
+        call_headers.update(headers_kwargs)
+
         response = requests.get(
             "{0}/{1}".format(self.request_host, url.lstrip('/')),
             auth=(self.api_key, 'x'),
-            headers=headers())
+            headers=call_headers)
 
         check_response_code(response.status_code)
 
+        # hacky, make this better
+        if response.url.endswith('.pdf'):
+            return response
         return response.json()
 
     def _post(self, url, payload):

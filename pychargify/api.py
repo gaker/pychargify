@@ -88,7 +88,7 @@ class Product(models.Model):
     initial_charge_in_cents = models.ChargifyField(value=0)
     trial_price_in_cents = models.ChargifyField(value=0)
     trial_interval = models.ChargifyField(value=0)
-    trial_interval_unit = models.ChargifyField(value='day') # month or day
+    trial_interval_unit = models.ChargifyField(value='day')  # month or day
     expiration_interval = models.ChargifyField(value=0)
     expiration_interval_unit = models.ChargifyField(value='day')  # m or day
     return_url = models.ChargifyField(value='')
@@ -170,6 +170,25 @@ class Subscription(models.Model):
         url = 'customers/{0}/subscriptions.json'.format(customer_id)
         content = self._get(url)
         return self.process_result(content)
+
+    def get_statements(self, object_id=None, get_list=False):
+        if object_id:
+            if not get_list:
+                url = 'subscriptions/{0}/statements.json'.format(object_id)
+            else:
+                url = 'subscriptions/{0}/statements/ids.json'.format(object_id)
+        else:
+            url = 'statements/ids.json'
+        return self._get(url)
+
+    def get_statement(self, object_id, get_pdf=False):
+        url = 'statements/{0}.json'.format(object_id)
+        headers = {}
+        if get_pdf:
+            url = 'statements/{0}.pdf'.format(object_id)
+            headers.update({'Accept/Content-Type': 'application/pdf'})
+
+        return self._get(url, **headers)
 
 
 # class CreditCard(models.Model):
@@ -266,7 +285,7 @@ class Chargify(object):
             self.sub_domain = credentials['sub_domain']
         else:
             print("Need either an api_key and subdomain, "
-                "or credential file. Exiting.")
+                  "or credential file. Exiting.")
             exit()
 
     def customer(self, nodename=''):
