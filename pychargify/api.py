@@ -186,7 +186,10 @@ class Subscription(models.Model):
         headers = {}
         if get_pdf:
             url = 'statements/{0}.pdf'.format(object_id)
-            headers.update({'Accept/Content-Type': 'application/pdf'})
+            headers.update({
+                'Accept': 'application/pdf',
+                'content-type': 'application/pdf'
+            })
 
         return self._get(url, **headers)
 
